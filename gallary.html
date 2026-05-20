@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00f3ff;
+            --secondary: #bc13fe;
+            --bg: #0a0a12;
+            --glass: rgba(255, 255, 255, 0.05);
+            --text: #e0e0e0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Rajdhani', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Orqa fon panjarasi */
+        .bg-grid {
+            position: fixed;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.07) 1px, transparent 1px);
+            background-size: 60px 60px;
+            transform: perspective(800px) rotateX(45deg);
+            animation: gridMove 15s linear infinite;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        @keyframes gridMove {
+            0% { transform: perspective(800px) rotateX(45deg) translateY(0); }
+            100% { transform: perspective(800px) rotateX(45deg) translateY(60px); }
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            background: linear-gradient(to bottom, rgba(10,10,18,0.9), transparent);
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+            letter-spacing: 2px;
+        }
+
+        .subtitle { color: #888; margin-top: 5px; font-size: 1.1rem; }
+
+        /* Yuklash qismi */
+        .upload-zone {
+            max-width: 800px;
+            margin: 30px auto;
+            background: var(--glass);
+            border: 2px dashed rgba(0, 243, 255, 0.4);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(0, 243, 255, 0.1);
+            transform: scale(1.01);
+        }
+
+        .upload-zone i { font-size: 2.5rem; color: var(--primary); margin-bottom: 10px; }
+        .upload-zone p { color: #aaa; }
+        #fileInput { display: none; }
+
+        /* Filtr tugmalari */
+        .filters {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 0 20px;
+        }
+
+        .filter-btn {
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #aaa;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            transition: 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+        }
+
+        /* Galereya grid */
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--glass);
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 243, 255, 0.2);
+            border-color: var(--primary);
+        }
+
+        .card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .card-info {
+            padding: 14px;
+            background: linear-gradient(to top, rgba(10,10,18,0.9), transparent);
+        }
+
+        .card-date { color: #666; font-size: 0.85rem; }
+        .card-persons { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 5px; }
+        .person-tag {
+            background: rgba(188, 19, 254, 0.15);
+            color: var(--secondary);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(188, 19, 254, 0.3);
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active { opacity: 1; pointer-events: all; }
+        .modal img { max-width: 90%; max-height: 85vh; border-radius: 10px; box-shadow: 0 0 40px rgba(0,243,255,0.3); }
+        .close-modal {
+            position: absolute;
+            top: 20px; right: 30px;
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .close-modal:hover { color: var(--primary); transform: rotate(90deg); }
+
+        /* AI Processing Overlay */
+        .processing-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(5,5,10,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .processing-overlay.active { display: flex; }
+        
+        .spinner {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(0,243,255,0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .processing-text {
+            margin-top: 20px;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            letter-spacing: 1px;
+        }
+
+        .progress-bar {
+            width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.2s;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8rem; }
+            .gallery { grid-template-columns: 1fr; padding: 10px; }
+            .upload-zone { padding: 25px; margin: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <header>
+        <h1><i class="fa-solid fa-eye"></i> AI SMART GALLERY</h1>
+        <p class="subtitle">Yuzlarni aniqlash asosida avtomatik tartiblash</p>
+    </header>
+
+    <div class="upload-zone" id="dropZone">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <h2>Rasmlarni shu yerga tashlang</h2>
+        <p>yoki <span style="color:var(--primary); text-decoration: underline;">tanlash uchun bosing</span></p>
+        <input type="file" id="fileInput" multiple accept="image/*">
+    </div>
+
+    <div class="filters" id="filters">
+        <button class="filter-btn active" data-filter="all">Barchasi</button>
+        <!-- Shaxs tugmalari JS orqali qo'shiladi -->
+    </div>
+
+    <div class="gallery" id="gallery">
+        <!-- Rasmlar JS orqali qo'shiladi -->
+    </div>
+
+    <div class="modal" id="modal">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <img id="modalImg" src="" alt="Preview">
+    </div>
+
+    <div class="processing-overlay" id="processing">
+        <div class="spinner"></div>
+        <div class="processing-text" id="processingText">AI YUZLARNI TAHLIL QILMOQDA...</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <script>
+        // === MA'LUMOTLAR BAZASI (Session) ===
+        let galleryData = [];
+        let knownPersons = new Set();
+        let activeFilter = 'all';
+
+        // DOM Elementlar
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const gallery = document.getElementById('gallery');
+        const filtersContainer = document.getElementById('filters');
+        const processing = document.getElementById('processing');
+        const progressFill = document.getElementById('progressFill');
+        const processingText = document.getElementById('processingText');
+        const modal = document.getElementById('modal');
+        const modalImg = document.getElementById('modalImg');
+        const closeModal = document.getElementById('closeModal');
+
+        // === BOSHLANG'ICH MA'LUMOTLAR ===
+        const mockData = [
+            { src: 'https://picsum.photos/600/400?random=10', persons: ['Ali', 'Vali'], date: '12.05.2024' },
+            { src: 'https://picsum.photos/600/400?random=11', persons: ['Sardor'], date: '14.05.2024' },
+            { src: 'https://picsum.photos/600/400?random=12', persons: ['Aziza'], date: '18.05.2024' },
+            { src: 'https://picsum.photos/600/400?random=13', persons: ['Ali'], date: '20.05.2024' }
+        ];
+
+        mockData.forEach(item => {
+            item.persons.forEach(p => knownPersons.add(p));
+        });
+        galleryData = [...mockData];
+        renderGallery();
+        renderFilters();
+
+        // === UPLOAD & DRAG-DROP ===
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        // === FAYLLARNI QAYTA ISHLASH (AI SIMULYATSIYA) ===
+        function handleFiles(files) {
+            if (!files.length) return;
+            
+            processing.classList.add('active');
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+                progressFill.style.width = progress + '%';
+                processingText.innerText = `AI TAHLIL: ${Math.floor(progress)}%`;
+                
+                if (progress === 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        Array.from(files).forEach(file => {
+                            const url = URL.createObjectURL(file);
+                            const randomPersonCount = Math.floor(Math.random() * 2) + 1;
+                            const newPersons = [];
+                            
+                            for(let i=0; i<randomPersonCount; i++) {
+                                // 70% ehtimol bilan tanish shaxs, 30% yangi
+                                if (Math.random() > 0.3 && knownPersons.size > 0) {
+                                    const arr = Array.from(knownPersons);
+                                    newPersons.push(arr[Math.floor(Math.random() * arr.length)]);
+                                } else {
+                                    const newName = `Shaxs_${Math.floor(Math.random() * 90) + 10}`;
+                                    newPersons.push(newName);
+                                    knownPersons.add(newName);
+                                }
+                            }
+
+                            galleryData.unshift({
+                                src: url,
+                                persons: [...new Set(newPersons)],
+                                date: new Date().toLocaleDateString('uz-UZ')
+                            });
+                        });
+                        processing.classList.remove('active');
+                        progressFill.style.width = '0%';
+                        renderGallery();
+                        renderFilters();
+                    }, 400);
+                }
+            }, 200);
+        }
+
+        // === GALEREYANI RENDER QILISH ===
+        function renderGallery() {
+            gallery.innerHTML = '';
+            const filtered = activeFilter === 'all' 
+                ? galleryData 
+                : galleryData.filter(p => p.persons.includes(activeFilter));
+
+            filtered.forEach((photo, idx) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <img src="${photo.src}" loading="lazy" alt="AI Photo">
+                    <div class="card-info">
+                        <div class="card-date"><i class="fa-regular fa-calendar"></i> ${photo.date}</div>
+                        <div class="card-persons">
+                            ${photo.persons.map(p => `<span class="person-tag"><i class="fa-solid fa-user"></i> ${p}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => openModal(photo.src));
+                gallery.appendChild(card);
+            });
+        }
+
+        // === FILTRLARNI YANGILASH ===
+        function renderFilters() {
+            filtersContainer.innerHTML = `<button class="filter-btn ${activeFilter === 'all' ? 'active' : ''}" data-filter="all">Barchasi</button>`;
+            Array.from(knownPersons).sort().forEach(person => {
+                const btn = document.createElement('button');
+                btn.className = `filter-btn ${activeFilter === person ? 'active' : ''}`;
+                btn.dataset.filter = person;
+                btn.innerHTML = `<i class="fa-solid fa-user-tag"></i> ${person}`;
+                btn.addEventListener('click', () => {
+                    activeFilter = person;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderGallery();
+                });
+                filtersContainer.appendChild(btn);
+            });
+        }
+
+        // === MODAL ===
+        function openModal(src) {
+            modalImg.src = src;
+            modal.classList.add('active');
+        }
+
+        closeModal.addEventListener('click', () => modal.classList.remove('active'));
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') modal.classList.remove('active');
+        });
+
+        // === "BARCHASI" FILTRI ===
+        document.querySelector('.filter-btn[data-filter="all"]').addEventListener('click', function() {
+            activeFilter = 'all';
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            renderGallery();
+        });
+    </script>
+</body>
+</html>
